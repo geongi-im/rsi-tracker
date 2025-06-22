@@ -49,11 +49,24 @@ def main():
         message = rsi_calc.format_rsi_message(rsi_results)
         
         if alert_symbols:
+            # 지수 설명 매핑
+            index_descriptions = {
+                'SPY': 'S&P500',
+                'QQQ': 'Nasdaq', 
+                'DIA': 'Dow-Jones'
+            }
+            
             # 알림이 필요한 경우
             alert_message = f"🚨 <b>RSI 알림</b>\n\n"
             for symbol_data in alert_symbols:
                 status_emoji = "🔴" if symbol_data['status'] == "과매도" else "🟢"
-                alert_message += f"{status_emoji} {symbol_data['symbol']}: RSI {symbol_data['rsi_value']} ({symbol_data['status']})\n"
+                
+                # 지수 설명 추가
+                symbol_display = symbol_data['symbol']
+                if symbol_display in index_descriptions:
+                    symbol_display = f"{symbol_data['symbol']} ({index_descriptions[symbol_data['symbol']]})"
+                
+                alert_message += f"{status_emoji} {symbol_display}: RSI {symbol_data['rsi_value']} ({symbol_data['status']})\n"
             alert_message += f"\n{message}"
             
             telegram.send_message(alert_message)

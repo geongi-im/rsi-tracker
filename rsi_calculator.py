@@ -205,12 +205,24 @@ class RSICalculator:
         if not rsi_data_list:
             return "RSI 데이터를 가져올 수 없습니다."
             
+        # 지수 설명 매핑
+        index_descriptions = {
+            'SPY': 'S&P500',
+            'QQQ': 'Nasdaq',
+            'DIA': 'Dow-Jones'
+        }
+        
         message = "📊 <b>미국 주요 지수 RSI 현황</b>\n\n"
         
         for data in rsi_data_list:
             status_emoji = "🔴" if data['status'] == "과매도" else "🟢" if data['status'] == "과매수" else "🔵"
             
-            message += f"{status_emoji} <b>{data['symbol']}</b>\n"
+            # 지수 설명 추가
+            symbol_display = data['symbol']
+            if symbol_display in index_descriptions:
+                symbol_display = f"{data['symbol']} ({index_descriptions[data['symbol']]})"
+            
+            message += f"{status_emoji} <b>{symbol_display}</b>\n"
             message += f"   RSI: {data['rsi_value']}\n"
             message += f"   현재가: ${data['current_price']}\n"
             message += f"   상태: {data['status']}\n\n"
