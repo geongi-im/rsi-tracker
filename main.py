@@ -5,9 +5,10 @@ from utils.logger_util import LoggerUtil
 from utils.telegram_util import TelegramUtil
 from rsi_calculator import RSICalculator
 from vix_analysis import VIXAnalyzer
+from fear_greed_fetch import FearGreedFetcher
 
 # 텔레그램 메시지 포맷팅을 이 파일에서 처리
-def format_market_message(rsi_data_list, vix_info):
+def format_market_message(rsi_data_list, vix_info, fgi_info=None):
     if not rsi_data_list:
         return "RSI 데이터를 가져올 수 없습니다."
 
@@ -19,19 +20,6 @@ def format_market_message(rsi_data_list, vix_info):
     }
 
     message = "📊 <b>미국 시장 현황 분석</b>\n\n"
-
-    # VIX 섹션
-    if vix_info is not None:
-        vix_status_emoji = {
-            "매우 안정": "🟢",
-            "안정": "🟢",
-            "경계": "🟡",
-            "불안": "🟠",
-            "위기": "🔴",
-        }.get(vix_info.get("status", "경계"), "🟡")
-        message += "🌪 <b>VIX 변동성 지표</b>\n"
-        message += f"   VIX 종가: {vix_info.get('close', 'N/A')}\n"
-        message += f"   상태: {vix_status_emoji} {vix_info.get('status', 'N/A')}\n\n"
 
     # 주요 지수 RSI 섹션
     for data in rsi_data_list:
@@ -45,6 +33,40 @@ def format_market_message(rsi_data_list, vix_info):
         message += f"   RSI: {data['rsi_value']}\n"
         message += f"   현재가: ${data['current_price']}\n"
         message += f"   상태: {data['status']}\n\n"
+
+    # VIX 섹션 (RSI 다음)
+    if vix_info is not None:
+        vix_status_emoji = {
+            "매우 안정": "🟢",
+            "안정": "🟢",
+            "경계": "🟡",
+            "불안": "🟠",
+            "위기": "🔴",
+        }.get(vix_info.get("status", "경계"), "🟡")
+        message += "🌪 <b>VIX 변동성 지표</b>\n"
+        message += f"   VIX 종가: {vix_info.get('close', 'N/A')}\n"
+        message += f"   상태: {vix_status_emoji} {vix_info.get('status', 'N/A')}\n\n"
+
+    # Fear & Greed Index 섹션 (있을 경우)
+    if fgi_info is not None:
+        fgi_emoji = {
+            "극단적 공포": "🟥",
+            "공포": "🟧",
+            "중립": "🟨",
+            "탐욕": "🟩",
+            "극단적 탐욕": "🟩",
+        }.get(fgi_info.get("status_kr", "중립"), "🟨")
+        message += "🧭 <b>Fear & Greed Index</b>\n"
+        message += f"   현재: {fgi_info.get('value', 'N/A')}\n"
+        message += f"   상태: {fgi_emoji} {fgi_info.get('status_kr', 'N/A')} ({fgi_info.get('status_en', 'N/A')})\n"
+        # 1주전/1달전 값이 있을 때만 표시
+        week_val = fgi_info.get('week_value')
+        month_val = fgi_info.get('month_value')
+        if week_val is not None:
+            message += f"   1주전: {week_val} ({fgi_info.get('week_status_kr', 'N/A')})\n"
+        if month_val is not None:
+            message += f"   1달전: {month_val} ({fgi_info.get('month_status_kr', 'N/A')})\n"
+        message += "\n"
 
     message += f"⏰ 업데이트: {rsi_data_list[0]['timestamp']}\n"
 
@@ -71,6 +93,10 @@ def main():
         # VIX 분석기 초기화
         vix = VIXAnalyzer()
         logger.info("VIX 분석기 초기화 완료")
+
+        # Fear & Greed Fetcher 초기화
+        fgi_fetcher = FearGreedFetcher()
+        logger.info("Fear & Greed Fetcher 초기화 완료")
         
         # 추적할 주식 심볼들
         symbols = ['SPY', 'QQQ', 'DIA']
@@ -80,6 +106,7 @@ def main():
         logger.info("데이터 계산 시작 (RSI, VIX)")
         rsi_results = rsi_calc.get_rsi_for_symbols(symbols)
         vix_info = vix.get_latest_vix()
+        fgi_info = fgi_fetcher.get_latest_fgi()
         
         if not rsi_results:
             error_msg = "RSI 데이터를 가져올 수 없습니다."
@@ -87,7 +114,7 @@ def main():
             telegram.send_message(f"❌ 오류: {error_msg}")
             return
         
-        logger.info(f"RSI 계산 완료: {len(rsi_results)}개 심볼, VIX 수집: {'성공' if vix_info else '실패'}")
+        logger.info(f"RSI 계산 완료: {len(rsi_results)}개 심볼, VIX 수집: {'성공' if vix_info else '실패'}, FGI 수집: {'성공' if fgi_info else '실패'}")
         
         # 알림이 필요한 심볼들 확인
         alert_symbols = []
@@ -96,7 +123,7 @@ def main():
                 alert_symbols.append(result)
         
         # 텔레그램 메시지 전송
-        message = format_market_message(rsi_results, vix_info)
+        message = format_market_message(rsi_results, vix_info, fgi_info)
         
         if alert_symbols:
             # 지수 설명 매핑
@@ -160,6 +187,9 @@ def test_mode():
         # VIX 분석기 테스트
         vix = VIXAnalyzer()
         
+        # Fear & Greed Fetcher 테스트
+        fgi_fetcher = FearGreedFetcher()
+
         # 테스트 메시지 전송
         test_message = "🧪 <b>미국 시장 현황 분석 - 테스트</b>\n\n테스트 메시지가 정상적으로 전송되었습니다."
         telegram.send_test_message(test_message)
@@ -169,9 +199,10 @@ def test_mode():
         symbols = ['SPY']  # 테스트용 1개 심볼만
         results = rsi_calc.get_rsi_for_symbols(symbols)
         vix_info = vix.get_latest_vix()
+        fgi_info = fgi_fetcher.get_latest_fgi()
         
         if results:
-            message = format_market_message(results, vix_info)
+            message = format_market_message(results, vix_info, fgi_info)
             telegram.send_test_message(f"📊 테스트 결과:\n\n{message}")
             logger.info("RSI 계산 테스트 완료")
         else:

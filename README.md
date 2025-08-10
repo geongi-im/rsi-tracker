@@ -4,6 +4,8 @@
 
 RSI Tracker는 주식 시장의 RSI(Relative Strength Index) 지표를 자동으로 계산하고 모니터링하는 파이썬 애플리케이션입니다. 설정된 주식 심볼들의 RSI 값을 실시간으로 추적하여 과매수/과매도 상황을 감지하고, 텔레그램을 통해 알림을 전송합니다.
 
+또한 VIX(변동성 지수)와 CNN의 Fear & Greed Index(FGI)를 함께 표시하여 시장 심리를 종합적으로 파악할 수 있도록 메시지에 포함합니다. 전송 메시지 제목은 "미국 시장 현황 분석"이며, 섹션 순서는 RSI → VIX → F&G 입니다.
+
 ## 주요 기능
 
 - 📊 **RSI 계산**: 표준 Wilder's Smoothing Method를 사용한 RSI 계산
@@ -12,6 +14,8 @@ RSI Tracker는 주식 시장의 RSI(Relative Strength Index) 지표를 자동으
 - 🔧 **환경 설정**: .env 파일을 통한 유연한 설정 관리
 - 📝 **로깅**: 상세한 로그 기록을 통한 실행 상황 추적
 - 🧪 **테스트 모드**: 시스템 테스트용 별도 실행 모드
+- 🌪 **VIX 변동성 지표**: `^VIX` 종가 수집 및 구간 기반 상태 분류
+- 🧭 **Fear & Greed Index**: CNN FGI 수치 수집 및 상태 분류
 
 ## 시스템 요구사항
 
@@ -29,6 +33,7 @@ python-dotenv>=1.0.0 # 환경 변수 관리
 requests>=2.31.0     # HTTP 요청
 pymysql>=1.1.0       # MySQL 데이터베이스 연결
 ta>=0.10.2           # 기술적 분석 지표 계산
+fear-and-greed>=0.3.0 # CNN Fear & Greed Index 수집
 ```
 
 ## 설치 및 설정
@@ -82,6 +87,8 @@ python main.py --test
 rsi-tracker/
 ├── main.py                 # 메인 실행 파일
 ├── rsi_calculator.py       # RSI 계산 로직
+├── vix_analysis.py         # VIX 수집/분류 로직
+├── fear_greed_fetch.py     # CNN FGI 수집/분류 로직
 ├── requirements.txt        # 의존성 패키지 목록
 ├── README.md              # 프로젝트 문서
 ├── .env                   # 환경 변수 (생성 필요)
@@ -92,6 +99,14 @@ rsi-tracker/
     ├── logger_util.py     # 로깅 유틸리티
     └── telegram_util.py   # 텔레그램 메시지 전송
 ```
+
+## 메시지 구성
+
+- 제목: "📊 미국 시장 현황 분석"
+- 섹션 순서: RSI → VIX → Fear & Greed Index
+  - RSI: 각 지수의 RSI 값, 현재가, 상태(과매도/정상/과매수)
+  - VIX: VIX 종가와 상태(매우 안정/안정/경계/불안/위기)
+  - Fear & Greed: 지수 값과 상태(극단적 공포/공포/중립/탐욕/극단적 탐욕)
 
 ## 주요 클래스 및 메서드
 
@@ -120,13 +135,29 @@ rsi-tracker/
 
 심볼은 `main.py`의 `symbols` 리스트를 수정하여 변경할 수 있습니다.
 
+## 지표 기준
+
+- VIX 상태 분류
+  - 0 ~ 15: 매우 안정
+  - 15 ~ 20: 안정
+  - 20 ~ 30: 경계
+  - 30 ~ 40: 불안
+  - 40 이상: 위기
+
+- Fear & Greed Index 상태 분류 (0~100)
+  - 0 ~ 24: 극단적 공포 (Extreme Fear)
+  - 25 ~ 44: 공포 (Fear)
+  - 45 ~ 55: 중립 (Neutral)
+  - 56 ~ 75: 탐욕 (Greed)
+  - 76 ~ 100: 극단적 탐욕 (Extreme Greed)
+
 ## 알림 조건
 
 - **과매도 알림**: RSI ≤ 30 (기본값)
 - **과매수 알림**: RSI ≥ 70 (기본값)
 - **정상 상황**: 일일 현황 보고
 
-알림 임계값은 `.env` 파일에서 `RSI_OVERSOLD_THRESHOLD`와 `RSI_OVERBOUGHT_THRESHOLD`로 조정할 수 있습니다.
+알림 임계값은 `.env` 파일에서 `RSI_OVERSOLD_THRESHOLD`와 `RSI_OVERBOUGHT_THRESHOLD`로 조정할 수 있습니다. 현재 알림 트리거는 RSI 기준에 한해 동작하며, VIX/FGI는 현황 제공 용도로 메시지에 포함됩니다.
 
 ## 로그 관리
 
