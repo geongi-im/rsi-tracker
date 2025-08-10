@@ -192,45 +192,7 @@ class RSICalculator:
                 
         return results
     
-    def format_rsi_message(self, rsi_data_list):
-        """
-        RSI 데이터를 텔레그램 메시지 형식으로 포맷팅
-        
-        Args:
-            rsi_data_list: RSI 데이터 리스트
-        
-        Returns:
-            str: 포맷된 메시지
-        """
-        if not rsi_data_list:
-            return "RSI 데이터를 가져올 수 없습니다."
-            
-        # 지수 설명 매핑
-        index_descriptions = {
-            'SPY': 'S&P500',
-            'QQQ': 'Nasdaq',
-            'DIA': 'Dow-Jones'
-        }
-        
-        message = "📊 <b>미국 주요 지수 RSI 현황</b>\n\n"
-        
-        for data in rsi_data_list:
-            status_emoji = "🔴" if data['status'] == "과매도" else "🟢" if data['status'] == "과매수" else "🔵"
-            
-            # 지수 설명 추가
-            symbol_display = data['symbol']
-            if symbol_display in index_descriptions:
-                symbol_display = f"{data['symbol']} ({index_descriptions[data['symbol']]})"
-            
-            message += f"{status_emoji} <b>{symbol_display}</b>\n"
-            message += f"   RSI: {data['rsi_value']}\n"
-            message += f"   현재가: ${data['current_price']}\n"
-            message += f"   상태: {data['status']}\n\n"
-        
-        message += f"⏰ 업데이트: {rsi_data_list[0]['timestamp']}\n"
-        message += f"📈 RSI 기준: 과매도≤{self.oversold_threshold}, 과매수≥{self.overbought_threshold}"
-        
-        return message
+    # 메시지 포맷팅은 main.py로 이동
 
 # 테스트용 메인 함수
 if __name__ == "__main__":
@@ -259,7 +221,4 @@ if __name__ == "__main__":
     for result in results:
         print(result)
     
-    # 메시지 포맷팅 테스트
-    print("\n=== 텔레그램 메시지 포맷 테스트 ===")
-    message = calculator.format_rsi_message(results)
-    print(message)
+    # 포맷팅 테스트는 main.py의 format_market_message를 사용하세요.
