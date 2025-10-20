@@ -59,6 +59,7 @@ def format_market_message(rsi_data_list, vix_info, fgi_info=None):
         message += "🧭 <b>Fear & Greed Index</b>\n"
         message += f"   현재: {fgi_info.get('value', 'N/A')}\n"
         message += f"   상태: {fgi_emoji} {fgi_info.get('status_kr', 'N/A')} ({fgi_info.get('status_en', 'N/A')})\n"
+        message += f"   <a href='https://money.cnn.com/data/fear-and-greed/' target='_blank'>사이트 바로가기</a>\n"
         # 1주전/1달전 값이 있을 때만 표시
         week_val = fgi_info.get('week_value')
         month_val = fgi_info.get('month_value')
